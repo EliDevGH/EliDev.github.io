@@ -1,0 +1,67 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      # Define VPC properties
+  Subnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      # Define subnet properties
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      # Define security group properties
+  WebServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      # Define EC2 instance properties
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          apt-get update -y
+          apt-get install -y ansible
+          ansible-pull -U https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+      # Define ELB properties
+- hosts: all
+  become: true
+  tasks:
+    - name: Install Nginx (or Apache)
+      apt:
+        name: nginx
+        state: present
+
+    - name: Copy HTML file
+      copy:
+        content: |
+          <html>
+          <head>
+          <title>Hello World</title>
+          </head>
+          <body>
+          <h1>Hello World!</h1>
+          </body>
+          </html>
+        dest: /var/www/html/index.html
+
+    - name: Configure Nginx (or Apache)
+      template:
+        src: nginx.conf.j2  # Create a template file with appropriate configuration
+        dest: /etc/nginx/nginx.conf
+
+
+- name: Configure SSL/TLS
+  lineinfile:
+    path: /etc/nginx/nginx.conf
+    regexp: '^(\s*)#?(listen\s+80;)$'
+    line: '\1return 301 https://$host$request_uri;'
+    backrefs: yes
+    state: present
+
+- name: Install SSL/TLS certificate
+  copy:
+    src: ssl_certificate.crt
+    dest: /etc
